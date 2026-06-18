@@ -26,23 +26,16 @@ test('Category title @sprint1 @AC2',async({page}) => {
     await expect(page.locator('[data-test="page-title"]')).toHaveText('Category: Hand Tools');
 })
 
-test('Products from selected category @sprint1 @AC3',async({page}) => {
+test('Products from selected category @sprint1 @AC3', async ({ page }) => {
     // Given the category page is displayed
-    // Then only products belonging to the selected category are shown. 
-    await page.goto('https://with-bugs.practicesoftwaretesting.com/#/');
-    const categoryMenu = page.locator('.nav-item.dropdown');
-    await categoryMenu.click();
+    // Then only products belonging to the selected category are shown.
+    await page.goto('https://with-bugs.practicesoftwaretesting.com/#/category/hand-tools');
 
-    await expect(page.locator('.dropdown-menu.show')).toBeVisible();
-    const clickCategory = page.locator('[data-test="nav-hand-tools"]');
-    await clickCategory.click();
-
-    await page.locator('[data-test="category-3"]').click();
+    await page.locator('[data-test="category-3"]').check();
 
     await expect(page.locator('[data-test="filter_completed"]')).toBeVisible();
     await expect(page.locator('[data-test="product-name"]').first()).toContainText('Hammer');
-    
-})
+});
 
 
 
