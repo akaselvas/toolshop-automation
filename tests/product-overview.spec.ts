@@ -95,3 +95,86 @@ test('Category filter @AC5', async({page}) =>{
     }
         
 })
+
+test(' Hierarchical category selection @AC6',async ({page}) => {
+    // Given a parent category has child categories
+    // When I check the parent category checkbox
+    // Then all child category checkboxes are also checked
+    // And unchecking all children unchecks the parent. 
+    await page.goto('https://practicesoftwaretesting.com/');
+
+    await expect(page.locator('div[data-test="filters"]')).toBeVisible();
+
+    const checkParent = page.locator('[data-test="category-01KVGGMXRC3H67A5WQD37VP3MM"]');
+    await checkParent.check();
+    
+    const handToolsGroup = page.locator('div.checkbox').filter({ 
+        has: page.locator('[data-test="category-01KVGGMXRC3H67A5WQD37VP3MM"]')});
+
+    const checkedChilds = await handToolsGroup.locator('ul input[type="checkbox"]').all();
+
+    for (const checked of checkedChilds){
+        await expect(checked).toBeChecked();
+    };
+
+    for (const unchecked of checkedChilds){
+        await  unchecked.uncheck();
+    };
+    
+    await expect(checkParent).not.toBeChecked;
+
+})
+
+test('Brand filter @AC7', async ({page}) => {
+    // Given I check one or more brand checkboxes in the sidebar
+    // Then the product grid updates to show only products from those brands
+    await page.goto('https://practicesoftwaretesting.com/');
+
+    await expect(page.locator('div[data-test="filters"]')).toBeVisible();
+
+    const checkBrand = page.locator('[data-test="brand-01KVGM2STDYRDBAA5FMPT8D4PW"]');
+    await checkBrand.click();  
+
+    const refreshedCards = page.locator('[data-test="filter_completed"]');
+    await expect(refreshedCards).toBeVisible();
+    const firstCard = refreshedCards.locator('.card').first();
+    await firstCard.click();
+
+    await expect(page).toHaveURL(/product/);
+    await expect(page.getByLabel('brand')).toContainText('ForgeFlex Tools');
+
+})
+
+test('Combining filters @AC8', async ({page}) => {
+    // Given I have selected categories and brands
+    // Then the product grid shows only products matching both filters. 
+    await page.goto('https://practicesoftwaretesting.com/');
+
+    await expect(page.locator('div[data-test="filters"]')).toBeVisible();
+
+    const checkBrand = page.locator('[data-test="brand-01KVGM2STDYRDBAA5FMPT8D4PW"]');
+    await checkBrand.click();
+
+    const checkCategory = page.locator('[data-test="category-01KVGM2T5VEQ2HH7WZKMS8DNEN"]');
+    await checkCategory.click();
+
+    const refreshedCards = page.locator('[data-test="filter_completed"]');
+    await expect(refreshedCards).toBeVisible();
+
+    const firstCard = refreshedCards.locator('.card').first();
+    await firstCard.click();
+
+    await expect(page).toHaveURL(/product/);
+    await expect(page.getByLabel('brand')).toContainText('ForgeFlex Tools');
+    await expect(page.getByLabel('category')).toContainText('Hammer');
+})
+
+test('Sorting @AC9', async ({page}) => {
+    // Given I select a sort option (Name A-Z, Name Z-A, Price High-Low, Price Low-High)
+    // Then the product grid reloads with products ordered accordingly. 
+    await page.goto('https://practicesoftwaretesting.com/');
+
+    await expect(page.locator('div[data-test="filters"]')).toBeVisible();
+    
+
+})
