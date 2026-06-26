@@ -70,3 +70,62 @@ test('Rental detail page @sprint5 @AC3', async({page}) => {
 
     expect(totalPrice).toBe(hourlyRate * duration);  
 })
+
+test('Rental label in checkout @sprint5 @AC4', async({page}) => {
+    // Given a rental item is in my cart
+    // Then the item is marked with "This is a rental item" in the checkout cart. 
+    await page.goto(baseURL + '/rentals');
+
+    const rentalProduct = page.locator('.card.mb-3').first();
+    await expect(rentalProduct).toBeVisible();
+    await rentalProduct.click();
+
+    await page.waitForURL('**/product/**');
+
+    const addButton = page.getByTestId('add-to-cart');
+    await expect(addButton).toBeVisible();
+    await addButton.click();
+
+    await expect(page.getByText('Product added to shopping cart')).toBeVisible({ timeout: 10000 });
+
+    await expect(page.getByTestId('cart-quantity')).toHaveText('1', {timeout: 10000});
+
+    const favButton = page.getByTestId('nav-cart');
+    await favButton.click();
+
+    await page.waitForURL('**/checkout');
+
+    await expect(page.getByText('Item for rent, price per hour')).toBeVisible();
+})
+
+test('Location-based discount on rentals @sprint5 @AC5', async({page}) => {
+    // Given a rental product is marked as a location offer
+    // And my location matches a supported city
+    // Then the location discount is applied to the rental price. 
+    await page.addInitScript(() => {
+        window.localStorage.setItem('GEO_LOCATION', JSON.stringify({ lat:52, lng: 5 }))
+    })
+    
+    await page.goto(baseURL + '/rentals');
+
+    const rentalProduct = page.locator('.card.mb-3').first();
+    await expect(rentalProduct).toBeVisible();
+    await rentalProduct.click();
+
+    await page.waitForURL('**/product/**');
+
+    const addButton = page.getByTestId('add-to-cart');
+    await expect(addButton).toBeVisible();
+    await addButton.click();
+
+    await expect(page.getByText('Product added to shopping cart')).toBeVisible({ timeout: 10000 });
+
+    const favButton = page.getByTestId('nav-cart');
+    await favButton.click();
+
+    await page.waitForURL('**/checkout');
+
+    const discountBadge = page.locator('.badge.bg-warning');
+    await expect(discountBadge).toContainText('%');
+
+})
