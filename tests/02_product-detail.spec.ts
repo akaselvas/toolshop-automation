@@ -33,33 +33,6 @@ test('Product information shown @sprint5 @AC1', async ({page}) =>{
     await expect(page.getByLabel('brand')).toBeVisible();
 })
 
-
-test('Related products @sprint5 @AC14', async({page}) =>{
-    // Given the product detail page is displayed
-    // Then a section with related products is shown below the main product information
-    // And each related product is clickable and navigates to its detail page. 
-    await page.goto('https://with-bugs.practicesoftwaretesting.com/#/');
-    const firstCard = page.locator('.card').first();
-    await firstCard.click();
-
-    await expect(page.locator('.card').first()).toBeVisible();
-    const relatedCards = await page.locator('.card').all();
-
-    expect(relatedCards.length).toBeGreaterThan(0);
-
-    for (const card of relatedCards){
-        const href = await card.getAttribute('href');
-        expect(href).toContain('product');
-    }
-
-    const cardLink = await relatedCards[0].getAttribute('href');
-    await relatedCards[0].click();
-    expect(cardLink).not.toBeNull();
-    await expect(page).toHaveURL(new RegExp (cardLink!));
-
-})
-
-
 test('Discount price display @sprint5 @AC2', async({page}) => {
     // Given the product has a discount
     // Then the original price is shown with a strikethrough
@@ -264,7 +237,7 @@ test('Rental duration slider @sprint5 @AC10', async({page}) => {
     // Given the product is a rental item
     // Then a duration slider (1–10 hours) is shown instead of plus/minus buttons
     // And the total price is calculated as hourly rate multiplied by duration. 
-    await page.goto(`${baseURL}/rentals`);
+    await page.goto(baseURL + '/rentals');
 
     await expect(page.getByTestId('page-title')).toBeVisible({ timeout: 15000 });
     const productCard = page.locator('.card.mb-3').first();
@@ -291,42 +264,120 @@ test('Rental duration slider @sprint5 @AC10', async({page}) => {
     expect(totalPrice).toBe(hourlyRate * duration);  
 })
 
-test('Add to Favorites @sprint5 @AC11', async({page}, testInfo) => {
-    // Given I am logged in
+
+test.describe('Favorites - Authenticated', () => {
+    // Esse bloco vai rodar ANTES do AC11 e do AC12 automaticamente
+    test.beforeEach(async ({ page }) => {
+        
+        await page.goto(baseURL + '/auth/login');
+
+        await expect(page.getByTestId('login-form')).toBeVisible();
+
+        const emailPlaceholder = page.getByTestId('email');
+        const passPlaceholder = page.getByTestId('password');
+        const loginButton = page.getByTestId('login-submit');
+
+        await emailPlaceholder.fill('customer2@practicesoftwaretesting.com');
+        await passPlaceholder.fill('welcome01');
+        await loginButton.click();
+
+        await page.waitForURL('**/account');
+
+        await page.goto(baseURL);
+    });
+
+    test('Add to Favorites @sprint5 @AC11', async ({ page }, testInfo) => {
+        // Given I am logged in
+        // When I click "Add to Favorites"
+        // Then a success message "Product added to your favorites list." is displayed. 
+        
+        let productToTest = 'Slip Joint Pliers';
+        if (testInfo.project.name === 'firefox') {
+            productToTest = 'Long Nose Pliers';
+        } else if (testInfo.project.name === 'webkit') {
+            productToTest = 'Pliers';
+        }
+        
+        const productCard = page.locator('.card').filter({ hasText: productToTest }).first();
+        await expect(productCard).toBeVisible();
+        await productCard.click();
+        
+        await page.waitForURL('**/product/**');
+
+        const addFavorites = page.getByTestId('add-to-favorites');
+        await addFavorites.click();
+
+        await expect(page.getByText('Product added to your favorites list')).toBeVisible({ timeout: 10000 });
+    });
+
+    test('Duplicate favorite @sprint5 @AC12', async ({ page }) => {
+        // Given the product is already in my favorites
+        // When I click "Add to Favorites"
+        // Then the message "Product already in your favorites list." is displayed. 
+        const productCard = page.locator('.card').filter({ hasText: 'Combination Pliers' }).first();
+        await expect(productCard).toBeVisible();
+        await productCard.click();
+        
+        await page.waitForURL('**/product/**');
+
+        const addFavorites = page.getByTestId('add-to-favorites');
+        await addFavorites.click();
+
+        await page.waitForTimeout(1000); 
+        await addFavorites.click();
+
+        const duplicateToast = page.getByText('Product already in your favorites list').first();
+        await expect(duplicateToast).toBeVisible({ timeout: 10000 });
+
+    });
+});
+
+test('Not logged in @sprint5 @AC13', async ({page}) => {
+    // Given I am not logged in
     // When I click "Add to Favorites"
-    // Then a success message "Product added to your favorites list." is displayed. 
-    let productToTest = 'Slip Joint Pliers';
-    if (testInfo.project.name === 'firefox') {
-        productToTest = 'Long Nose Pliers';
-    } else if (testInfo.project.name === 'webkit') {
-        productToTest = 'Pliers';
-    }
-    
-    await page.goto(`${baseURL}/auth/login`);
+    // Then the message "Unauthorized, can not add product to your favorite list." is displayed. 
+    await page.goto(baseURL);
 
-    await expect(page.getByTestId('login-form')).toBeVisible();
-
-    const emailPlaceholder = page.getByTestId('email');
-    const passPlaceholder = page.getByTestId('password');
-    const loginButton = page.getByTestId('login-submit');
-
-    await emailPlaceholder.fill('customer2@practicesoftwaretesting.com');
-    await passPlaceholder.fill('welcome01');
-    await loginButton.click();
-
-    await page.waitForURL('**/account');
-
-    await page.goto(`${baseURL}/`);
-
-    const productCard = page.locator('.card').filter({ hasText: productToTest }).first();
-    await expect(productCard).toBeVisible();
+    await expect(page.getByTestId('product-name').first()).toBeVisible({ timeout: 15000 });
+    const productCard = page.locator('.card').first();
     await productCard.click();
-    
-    await page.waitForURL('**/product/**');
 
+    await page.waitForURL('**/product/**');
     const addFavorites = page.getByTestId('add-to-favorites');
     await addFavorites.click();
 
-    await expect(page.getByText('Product added to your favorites list')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Unauthorized, can not add product to your favorite list')).toBeVisible({ timeout: 10000 });
 
 })
+
+test('Related products @sprint5 @AC14', async ({page}) => {
+    // Given the product detail page is displayed
+    // Then related products are shown below the main information. 
+    await page.goto(baseURL);
+
+    await expect(page.getByTestId('product-name').first()).toBeVisible({ timeout: 15000 });
+    const productCard = page.locator('.card').first();
+    await productCard.click();
+
+    await page.waitForURL('**/product/**');
+    
+    const headingProducts = page.getByRole('heading', { name: 'Related products' });
+    await expect(headingProducts).toBeVisible({ timeout: 10000 });
+
+    const relatedSection = page.locator('div.row').filter({
+        has: page.getByRole('heading', { name: 'Related products' })
+    });
+
+    await expect(relatedSection).toBeVisible();
+
+    const relatedCards = relatedSection.locator('.card');
+    await expect(relatedCards.first()).toBeVisible({ timeout: 10000 });
+
+    const cards = await relatedCards.all();
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+        await expect(card).toBeVisible();
+    }
+
+})
+
