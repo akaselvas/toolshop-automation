@@ -1,5 +1,4 @@
 import {test, expect, Locator} from "@playwright/test"
-import { clear } from "node:console";
 
 const baseURL = process.env.URL || 'https://practicesoftwaretesting.com';
 
