@@ -129,3 +129,4 @@ test('Location-based discount on rentals @sprint5 @AC5', async({page}) => {
     await expect(discountBadge).toContainText('%');
 
 })
+
