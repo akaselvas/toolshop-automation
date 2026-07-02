@@ -196,4 +196,10 @@ test('Already logged in during checkout @sprint5 @AC5', async ({ page }) => {
 
     await expect(page.getByText('Hello Jane Doe, you are already logged in')).toBeVisible({ timeout: 15000 });
 
+    // 5. Prossegue diretamente para a etapa do endereço de cobrança
+    const proceedButton = page.getByTestId('proceed-2');
+    await expect(proceedButton).toBeVisible();
+    await proceedButton.click();
+
+    await expect(page.locator('li.current')).toContainText('Billing Address', { timeout: 15000 });
 });
