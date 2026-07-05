@@ -205,56 +205,6 @@ test.describe('Checkout - Payment Step', () => {
         
     });
 
-    // test('Successful order form @sprint5 @AC9', async ({ page }) => {
-    //     // Given valid payment details are provided
-    //     // When I click confirm
-    //     // Then the payment is validated, the order is placed, a confirmation with the invoice number is shown, and the cart is cleared
-    //     // And a checkout confirmation email is sent to the customer. 
-    //     test.setTimeout(90000);
-
-    //     await page.getByTestId('payment-method').selectOption('credit-card');
-
-    //     await page.getByTestId('credit_card_number').fill('1234-5678-9012-3456');
-    //     await page.getByTestId('credit_card_number').blur();
-    //     await page.getByTestId('expiration_date').fill('12/2030');
-    //     await page.getByTestId('expiration_date').blur();
-    //     await page.getByTestId('cvv').fill('123');
-    //     await page.getByTestId('cvv').blur();
-    //     await page.getByTestId('card_holder_name').fill('Jane Doe');
-    //     await page.getByTestId('card_holder_name').blur();
-
-    //     const confirmButton = page.getByTestId('finish');
-    //     await expect(confirmButton).toBeEnabled();
-
-    //     // registra OS DOIS listeners ANTES do clique, evita perder o /invoices/guest
-    //     const paymentResponsePromise = page.waitForResponse(
-    //         resp => resp.url().includes('/payment/check') && resp.request().method() === 'POST'
-    //     );
-    //     const invoiceResponsePromise = page.waitForResponse(
-    //         resp => resp.url().includes('/invoices/guest') && resp.request().method() === 'POST'
-    //     );
-
-    //     await confirmButton.click();
-
-    //     const paymentResponse = await paymentResponsePromise;
-    //     console.log('STATUS DO /payment/check:', paymentResponse.status());
-    //     console.log('RESPOSTA:', await paymentResponse.text());
-    //     expect(paymentResponse.status()).toBeLessThan(300);
-
-    //     const invoiceResponse = await invoiceResponsePromise;
-    //     console.log('STATUS DA CRIAÇÃO DO PEDIDO (/invoices/guest):', invoiceResponse.status());
-    //     console.log('RESPOSTA:', await invoiceResponse.text());
-    //     expect(invoiceResponse.status()).toBeLessThan(300);
-
-    //     const orderConfirmation = page.locator('#order-confirmation');
-    //     await expect(orderConfirmation).toBeVisible({ timeout: 15000 });
-    //     await expect(orderConfirmation).toContainText('Thanks for your order! Your invoice number is');
-    //     await expect(page.locator('#invoice-number')).not.toHaveText('', { timeout: 5000 });
-
-    //     await expect(page.getByTestId('cart-quantity')).toBeHidden({ timeout: 10000 });
-    //     });
-
-
 });
 
 // AC9 fica fora do describe/beforeEach de propósito: os demais ACs usam um
@@ -328,7 +278,6 @@ test('Successful order form @sprint5 @AC9', async ({ page }) => {
     );
     await confirmButton.click();
     const paymentResponse = await firstPaymentCheck;
-    console.log('STATUS DO /payment/check (1º clique):', paymentResponse.status());
     expect(paymentResponse.status()).toBeLessThan(300);
 
     const invoiceResponsePromise = page.waitForResponse(
@@ -336,9 +285,7 @@ test('Successful order form @sprint5 @AC9', async ({ page }) => {
     );
     await confirmButton.click();
     const invoiceResponse = await invoiceResponsePromise;
-    console.log('STATUS DA CRIAÇÃO DO PEDIDO (2º clique):', invoiceResponse.status());
     const invoiceBody = await invoiceResponse.json();
-    console.log('RESPOSTA:', invoiceBody);
     expect(invoiceResponse.status()).toBeLessThan(300);
 
     const expectedInvoiceNumber = invoiceBody.invoice_number;

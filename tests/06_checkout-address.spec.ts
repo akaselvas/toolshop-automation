@@ -168,47 +168,50 @@ test.describe('checkout address', () => {
 });
 
 
-// test('Pre-fill for logged-in users @sprint5 @AC4', async ({ page }) => {
-//   const testEmail = `addr-user-${Date.now()}@example.com`;
-//   const testPassword = 'AnyPassworld11!';
-//   const address = {
-//     street: 'Test Street 123', postal_code: '12345',
-//     city: 'Test City', state: 'Test State', country: 'US',
-//   };
+test('Pre-fill for logged-in users @sprint5 @AC4', async ({ page }) => {
+    
+    test.fixme(true, 'Ignorando devido a bug');
 
-//   const registerUser = await page.request.post(`${apiURL}/users/register`, {
-//     data: {
-//       first_name: 'Jane', last_name: 'Doe', dob: '1990-01-01', phone: '1234567890',
-//       email: testEmail, password: testPassword, address,
-//     },
-//   });
-//   expect(registerUser.status()).toBe(201);
+    const testEmail = `addr-user-${Date.now()}@example.com`;
+    const testPassword = 'AnyPassworld11!';
+    const address = {
+        street: 'Test Street 123', postal_code: '12345',
+        city: 'Test City', state: 'Test State', country: 'US',
+    };
 
-//   await page.goto(`${baseURL}/auth/login`);
-//   await page.getByTestId('email').fill(testEmail);
-//   await page.getByTestId('password').fill(testPassword);
-//   await page.getByTestId('login-submit').click();
-//   await page.waitForURL('**/account');
+    const registerUser = await page.request.post(`${apiURL}/users/register`, {
+        data: {
+        first_name: 'Jane', last_name: 'Doe', dob: '1990-01-01', phone: '1234567890',
+        email: testEmail, password: testPassword, address,
+        },
+    });
+    expect(registerUser.status()).toBe(201);
 
-//   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
-//   await expect(page.locator('.card-img-top').first()).toBeVisible({ timeout: 15000 });
-//   await page.locator('.card').first().click();
-//   await page.waitForURL('**/product/**');
-//   await page.getByTestId('add-to-cart').click();
-//   await expect(page.getByText('Product added to shopping cart')).toBeVisible({ timeout: 10000 });
+    await page.goto(`${baseURL}/auth/login`);
+    await page.getByTestId('email').fill(testEmail);
+    await page.getByTestId('password').fill(testPassword);
+    await page.getByTestId('login-submit').click();
+    await page.waitForURL('**/account');
 
-//   await page.getByTestId('nav-cart').click();
-//   await page.waitForURL('**/checkout');
-//   await page.getByTestId('proceed-1').click();
+    await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.card-img-top').first()).toBeVisible({ timeout: 15000 });
+    await page.locator('.card').first().click();
+    await page.waitForURL('**/product/**');
+    await page.getByTestId('add-to-cart').click();
+    await expect(page.getByText('Product added to shopping cart')).toBeVisible({ timeout: 10000 });
 
-//   await expect(page.getByText('Hello Jane Doe, you are already logged in')).toBeVisible({ timeout: 15000 });
-//   await page.getByTestId('proceed-2').click();
+    await page.getByTestId('nav-cart').click();
+    await page.waitForURL('**/checkout');
+    await page.getByTestId('proceed-1').click();
 
-//   // AC4: aqui é onde o pre-fill deveria acontecer, mas te erro
-//   await expect(page.getByTestId('street')).toHaveValue(address.street, { timeout: 10000 });
-//   await expect(page.getByTestId('postal_code')).toHaveValue(address.postal_code);
-//   await expect(page.getByTestId('city')).toHaveValue(address.city);
-//   await expect(page.getByTestId('state')).toHaveValue(address.state);
-// });
+    await expect(page.getByText('Hello Jane Doe, you are already logged in')).toBeVisible({ timeout: 15000 });
+    await page.getByTestId('proceed-2').click();
+
+    // AC4: aqui é onde o pre-fill deveria acontecer, mas te erro
+    await expect(page.getByTestId('street')).toHaveValue(address.street, { timeout: 10000 });
+    await expect(page.getByTestId('postal_code')).toHaveValue(address.postal_code);
+    await expect(page.getByTestId('city')).toHaveValue(address.city);
+    await expect(page.getByTestId('state')).toHaveValue(address.state);
+});
 
 
