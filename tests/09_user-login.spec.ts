@@ -43,7 +43,7 @@ async function setupTotpUser(page: Page, request: APIRequestContext) {
     await page.getByTestId('login-submit').click();
     await page.waitForURL('**/account');
 
-    await page.goto(`${baseURL}/account/profile`);
+    await page.goto(baseURL +'/account/profile');
     const secretElement = page.getByTestId('totp-secret');
     await expect(secretElement).toBeVisible({ timeout: 15000 });
     const mfaSecret = (await secretElement.innerText()).trim();

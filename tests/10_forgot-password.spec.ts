@@ -18,7 +18,7 @@ test('Email validation, positive case, VALID RFC  @sprint5 @AC2', async ({ page 
     // Then it must match a valid RFC-compliant format. 
     await page.goto(baseURL + '/auth/forgot-password');
     
-    await page.getByTestId('email').fill('customer@practicesoftwaretesting.com');
+    await page.getByTestId('email').fill('customer3@practicesoftwaretesting.com');
     await page.getByTestId('forgot-password-submit').click(); 
 
     await expect(page.locator('.alert.alert-success')).toBeVisible();
@@ -30,7 +30,7 @@ test('Email validation, negative case, INVALID RFC @sprint5 @AC2', async ({ page
     // Then it must match a valid RFC-compliant format. 
     await page.goto(baseURL + '/auth/forgot-password');
     
-    await page.getByTestId('email').fill('customer@practicesoftwaretesting com');
+    await page.getByTestId('email').fill('customer3@practicesoftwaretesting com');
     await page.getByTestId('forgot-password-submit').click();
 
     await expect(page.getByTestId('email-error')).toBeVisible({ timeout: 10000 });
@@ -44,7 +44,7 @@ test('Successful reset @sprint5 @AC3', async ({ page }) => {
     // And a confirmation message is displayed and fades out after 3 seconds. 
     await page.goto(baseURL + '/auth/forgot-password');
     
-    await page.getByTestId('email').fill('customer@practicesoftwaretesting.com');
+    await page.getByTestId('email').fill('customer3@practicesoftwaretesting.com');
     await page.getByTestId('forgot-password-submit').click();
 
     const successAlert = page.locator('.alert.alert-success');
@@ -54,7 +54,7 @@ test('Successful reset @sprint5 @AC3', async ({ page }) => {
 
     await page.goto(baseURL + '/auth/login');
 
-    await page.getByTestId('email').fill('customer@practicesoftwaretesting.com');
+    await page.getByTestId('email').fill('customer3@practicesoftwaretesting.com');
     await page.getByTestId('password').fill('welcome02');
 
 });
