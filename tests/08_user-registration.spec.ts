@@ -82,25 +82,29 @@ test('Password strength indicator @sprint5 @AC4', async ({ page }) => {
     // Very Strong (4 criteria met, 80% bar)
     // Excellent (all criteria met, 100% bar)
 
-    test.fixme(true, 'Ignorando devido a bug conhecido de instabilidade no Password Strength do site original.');
+    //test.fixme(true, 'Ignorando devido a bug conhecido de instabilidade no Password Strength do site original.');
 
     await page.goto(baseURL + '/auth/register');
     await expect(page.getByRole('heading', { name: 'Customer registration' })).toBeVisible({ timeout: 10000 });
 
     const strengthTestCases = [
-        { password: '1', label: 'Weak', width: '20%' },
-        { password: 'AnyPassWord', label: 'Moderate', width: '40%' },
-        { password: 'An1PassWord', label: 'Strong', width: '60%' },
-        { password: 'An1P@ssWord', label: 'Very Strong', width: '80%' },
-        { password: 'An1P@ssWord_An1P@ssWord', label: 'Excellent', width: '100%' },
+        { password: 'a',            label: 'Weak',        width: '20%' },
+        { password: 'aB',           label: 'Moderate',     width: '40%' },
+        { password: 'aB1',          label: 'Strong',       width: '60%' },
+        { password: 'aB1!',         label: 'Very Strong',  width: '80%' },
+        { password: 'aB1!aaaaaaaa', label: 'Excellent',    width: '100%' },
     ];
 
     const passwordFill = page.getByTestId('password');
 
     for (const testPassword of strengthTestCases) {
         await passwordFill.fill('');
-
         await passwordFill.pressSequentially(testPassword.password);
+
+        // força a sincronia que o updateOn:'blur' atrasa, e depois força o handler
+        // (input) a rodar de novo agora que f['password'].value já está correto
+        await passwordFill.blur();
+        await passwordFill.dispatchEvent('input');
 
         await expect(page.locator('.strength-labels span.active')).toHaveText(testPassword.label);
         await expect(page.locator('.strength-bar .fill')).toHaveAttribute('style', `width: ${testPassword.width};`);
