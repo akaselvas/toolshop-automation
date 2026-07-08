@@ -185,8 +185,10 @@ test.describe('Customer Profile', () => {
         const response = await responsePromise;
         console.log('STATUS:', response.status());
         console.log('BODY:', await response.text());
+        
         const anyAlert = page.locator('[role="alert"]');
         await expect(anyAlert).toBeVisible({ timeout: 15000 });
+        
         const alertHtml = await anyAlert.evaluate(el => el.outerHTML);
         console.log('HTML DO ALERTA:', alertHtml);
         const alertText = await anyAlert.textContent();
