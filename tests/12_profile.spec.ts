@@ -85,6 +85,9 @@ test.describe('Customer Profile', () => {
 
 
     test('Successful update @sprint5 @AC4', async ({ page }) => {
+        // Given I modify profile fields with valid data
+        // When I save
+        // Then a success message is displayed and fades out after 5 seconds. 
         await page.goto(baseURL + '/account/profile');
 
         await expect(page.getByTestId('page-title')).toBeVisible({ timeout: 10000 });
