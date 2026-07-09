@@ -57,7 +57,12 @@ test.describe('Favorites Management - with favorites', () => {
         await page.goto(baseURL + '/account/favorites');
     });
 
+
     test('Favorites page @sprint5 @AC1', async ({ page }) => {
+        // Given I am logged in
+        // When I navigate to my favorites page
+        // Then a list of my favorite products is 
+        // displayed showing image, name, and description (truncated to 250 characters). 
         await expect(page.getByTestId('page-title')).toBeVisible({ timeout: 10000 });
 
         for (const product of favoriteProducts) {
@@ -74,6 +79,32 @@ test.describe('Favorites Management - with favorites', () => {
             await expect(card.getByTestId('product-description')).toContainText(truncatedDesc);
         }
     });
+
+
+    test('Remove a favorite @sprint5 @AC3', async ({ page }) => {
+        // Given the favorites list is displayed
+        // When I click the delete button on a favorite
+        // Then the product is removed and the list refreshes. 
+        await expect(page.getByTestId('page-title')).toBeVisible({ timeout: 10000 });
+        const favoriteCards = page.locator('app-favorites .card');
+
+       await expect(favoriteCards).toHaveCount(3, { timeout: 10000 });
+
+        const deletePromise = page.waitForResponse(response => 
+            response.url().includes('/favorites/') && 
+            response.request().method() === 'DELETE' &&
+            response.status() === 204
+        );
+
+        await favoriteCards.first().getByTestId('delete').click();
+
+        await deletePromise;
+
+        await expect(favoriteCards).toHaveCount(2, { timeout: 10000 });
+
+    });
+
+
 });
 
 
@@ -112,5 +143,14 @@ test.describe('Favorites Management - empty state', () => {
         await page.goto(baseURL + '/account/favorites');
     });
 
+
+    test('Empty favorites @sprint5 @AC2', async ({ page }) => {
+        // Given I have no favorites
+        // Then a message indicating no favorites is displayed. 
+        await expect(page.getByTestId('page-title')).toBeVisible({ timeout: 10000 });
+        
+        await expect(page.getByText('There are no favorites yet.')).toBeVisible({ timeout: 10000 });
+
+    });
    
 });
