@@ -7,11 +7,12 @@ const apiURL = 'https://api.practicesoftwaretesting.com';
 test.describe('Invoices | Dynamic Checkout Flow', () => {
     let testEmail: string;
     let testPassword: string;
+    let authToken: string;
 
     test.beforeEach(async ({ page }) => {
         testEmail = `invoice-user-${Date.now()}@example.com`;
         testPassword = 'AnyP@ssworld11!';
-     
+
         const registerResponse = await page.request.post(apiURL + '/users/register', {
             data: {
                 first_name: 'Jane', last_name: 'Doe', dob: '1990-01-01', phone: '1234567890',
@@ -21,58 +22,189 @@ test.describe('Invoices | Dynamic Checkout Flow', () => {
         });
         expect(registerResponse.status()).toBe(201);
 
-        await page.goto(baseURL + '/auth/login');
-        await page.getByTestId('email').fill(testEmail);
-        await page.getByTestId('password').fill(testPassword);
-
-        const loginResponsePromise = page.waitForResponse(
-            r => r.url().includes('/users/login') && r.request().method() === 'POST',
-            { timeout: 20000 }
-        );
-        await page.getByTestId('login-submit').click();
-        await loginResponsePromise;
-        await page.waitForURL('**/account', { timeout: 20000 });
+        // login via API, não via UI — não precisa nem abrir o navegador ainda
+        const loginResponse = await page.request.post(apiURL + '/users/login', {
+            data: { email: testEmail, password: testPassword },
+        });
+        expect(loginResponse.status()).toBe(200);
+        const loginBody = await loginResponse.json();
+        authToken = loginBody.access_token; // não 'token'
     });
+
 
     test('Non-existent invoice @sprint5 @AC3', async ({ page }) => {
         // Given the invoice does not exist or does not belong to me
         // Then a "not found" message is displayed. 
-        const adminLoginRes = await request.post(apiURL + '/users/login', {
+         const adminLoginRes = await page.request.post(apiURL + '/users/login', {
             data: {
                 email: 'admin@practicesoftwaretesting.com',
                 password: 'welcome01'
             }
         });
         expect(adminLoginRes.status()).toBe(200);
-        const { access_token } = await adminLoginRes.json();
+        const adminBody = await adminLoginRes.json();
+        const adminToken = adminBody.access_token;
 
-        const invoicesRes = await request.get(apiURL + '/invoices', {
-            headers: { Authorization: 'Bearer ' + access_token }
+        // 2. Busca as faturas do sistema usando page.request [44]
+        const invoicesRes = await page.request.get(apiURL + '/invoices', {
+            headers: { Authorization: 'Bearer ' + adminToken }
         });
         expect(invoicesRes.status()).toBe(200);
         const invoicesData = await invoicesRes.json();
         
+        // Pega o ID de uma fatura real de outro usuário
         const someoneElsesInvoiceId = invoicesData.data[0].id;
 
+        // 3. Faz o login visual na UI do nosso usuário dinâmico [16]
+        await page.goto(baseURL + '/auth/login');
+        await page.getByTestId('email').fill(testEmail);
+        await page.getByTestId('password').fill(testPassword);
+        await page.getByTestId('login-submit').click();
+        await page.waitForURL('**/account', { timeout: 20000 });
+
+        // 4. Tenta acessar a fatura de outro usuário de forma forçada na UI [1.1.2]
         await page.goto(baseURL + '/account/invoices/' + someoneElsesInvoiceId);
 
+        // 5. Valida se o sistema barrou o acesso e exibiu a mensagem de erro [1.1.2, 12]
         await expect(page.getByText("This invoice doesn't exist.")).toBeVisible({ timeout: 10000 });
-
     });
+
 
     test('Discount on invoice @sprint5 @AC4', async ({ page }) => {
         // Given the invoice has a discount
-        // Then the detail page shows the subtotal, discount percentage and amount, and final total. 
+        // Then the detail page shows the 
+        // subtotal, discount percentage and amount, and final total. 
+        const authHeaders = { Authorization: `Bearer ${authToken}` };
+
+        const regularProductsRes = await page.request.get(apiURL + '/products?is_rental=false');
+        const regularProducts = await regularProductsRes.json();
+        const regularProductId = regularProducts.data[0].id;
+
+        const rentalProductsRes = await page.request.get(apiURL + '/products?is_rental=true');
+        const rentalProducts = await rentalProductsRes.json();
+        const rentalProductId = rentalProducts.data[0].id;
+
+        const cartRes = await page.request.post(apiURL + '/carts', { headers: authHeaders, data: {} });
+        expect(cartRes.status()).toBe(201);
+        const { id: cartId } = await cartRes.json();
+
+        await page.request.post(apiURL + '/carts/' + cartId, {
+            headers: authHeaders, data: { product_id: regularProductId, quantity: 1 },
+        });
+        await page.request.post(apiURL + '/carts/' + cartId, {
+            headers: authHeaders, data: { product_id: rentalProductId, quantity: 1 },
+        });
+
+        const invoiceRes = await page.request.post(apiURL + '/invoices', {
+            headers: authHeaders,
+            data: {
+                cart_id: cartId,
+                billing_street: 'Autarboulevard',
+                billing_city: 'Stroe',
+                billing_state: 'Groningen',
+                billing_postal_code: '1011AB',
+                billing_country: 'NL',
+                payment_method: 'credit-card',
+                payment_details: {
+                    credit_card_number: '1234-5678-9012-3456',
+                    expiration_date: '12/2030',
+                    cvv: '123',
+                    card_holder_name: 'Jane Doe',
+                },
+            },
+        });
+        expect(invoiceRes.status(), await invoiceRes.text()).toBe(201);
+        const invoiceBody = await invoiceRes.json();
+        expect(invoiceBody.additional_discount_percentage).toBe(15);
+
+        await page.goto(baseURL + '/auth/login');
+        await page.getByTestId('email').fill(testEmail);
+        await page.getByTestId('password').fill(testPassword);
+        await page.getByTestId('login-submit').click();
+        await page.waitForURL('**/account', { timeout: 20000 });
+
+        await page.goto(baseURL + '/account/invoices/' + invoiceBody.id, { waitUntil: 'domcontentloaded' });
+        await expect(page.getByTestId('invoice-number')).toHaveValue(invoiceBody.invoice_number, { timeout: 25000 });
+
+        const subtotal = parseFloat((await page.locator('#subtotal').inputValue()).replace('$', '').trim());
+        const discount = parseFloat((await page.locator('#additional_discount_percentage').inputValue()).replace('$', '').trim());
+        const total = parseFloat((await page.locator('#total').inputValue()).replace('$', '').trim());
+
+        await expect(page.getByText(`Discount (${invoiceBody.additional_discount_percentage}%)`)).toBeVisible();
+        expect(discount).toBeCloseTo(subtotal * 0.15, 2);
+        expect(total).toBeCloseTo(subtotal - discount, 2);
+
+
     });
+    
 
     test('Discounted line items @sprint5 @AC5', async ({ page }) => {
         // Given a line item has a discount
         // Then the original price is shown with a strikethrough and the discounted price below. 
+        const mockInvoiceWithLineDiscount = {
+            id: "fake-line-discount-invoice",
+            invoice_number: "INV-2026-LINE-DISCOUNT",
+            invoice_date: "2026-07-10 12:00:00",
+            billing_street: "Test Street 123",
+            billing_city: "Test City",
+            billing_state: "Test State",
+            billing_postal_code: "12345",
+            billing_country: "US",
+            subtotal: 100.00,
+            total: 80.00,
+            payment: {
+                payment_method: "credit-card",
+                payment_details: {
+                    card_holder_name: "Jane Doe",
+                    credit_card_number: "4111********1111"
+                }
+            },
+            invoicelines: [
+                {
+                    id: "line-1",
+                    unit_price: 100.00,
+                    quantity: 1,
+                    discount_percentage: 20,
+                    discounted_price: 80.00,
+                    product: {
+                        name: "Discounted Bolt Cutters",
+                        price: 100.00
+                    }
+                }
+            ]
+        };
 
+        await page.route(apiURL + '/invoices/fake-line-discount-invoice', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify(mockInvoiceWithLineDiscount)
+            });
+        });
 
+        await page.goto(baseURL + '/auth/login');
+        await page.getByTestId('email').fill(testEmail);
+        await page.getByTestId('password').fill(testPassword);
+        await page.getByTestId('login-submit').click();
+        await page.waitForURL('**/account', { timeout: 20000 });
+
+        await page.goto(baseURL + '/account/invoices/fake-line-discount-invoice');
+        await expect(page.getByTestId('invoice-number')).toHaveValue(mockInvoiceWithLineDiscount.invoice_number, { timeout: 15000 });
+
+        await expect(page.getByText('-20%')).toBeVisible();
+
+        const originalPrice = page.locator('span.discounted').first();
+        await expect(originalPrice).toBeVisible();
+        await expect(originalPrice).toContainText('100.00');
+
+        const discountedPrice = page.locator('#discount-price').last();
+        await expect(discountedPrice).toBeVisible();
+        await expect(discountedPrice).toContainText('80');
     });
-});
 
+
+});
+    
 
 test.describe('Invoices | Read Only', () => {
     test.beforeEach(async ({ page }) => {
