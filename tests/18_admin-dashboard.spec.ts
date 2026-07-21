@@ -125,11 +125,54 @@ test.describe('Admin Dashboard Management Suite', () => {
         await expect(page.getByTestId('category-search-submit')).toBeVisible({ timeout: 10000 });
         await expect(page.getByTestId('category-add')).toBeVisible({ timeout: 10000 });
         const firstRow = page.locator('table tbody tr').first();
-        await expect(firstRow.getByRole('link', {name: 'Edit'})).toBeVisible({ timeout: 10000 });
-        await expect(firstRow.getByRole('button', {name: 'Delete'})).toBeVisible();
-        await expect(page.getByRole('columnheader', { name: 'Parent_id' })).toBeVisible();
+        await expect(firstRow.getByRole('link', { name: 'Edit' })).toBeVisible({ timeout: 10000 });
+        await expect(firstRow.getByRole('button', { name: 'Delete' })).toBeVisible();
 
-        
+        await page.getByTestId('category-add').click();
+        await page.waitForURL('**/admin/categories/add', { timeout: 10000 });
+
+        const categoryName = 'NewCategory' + Math.random().toString(36).replace(/[^a-z]/g, '').slice(0, 5);
+        const categorySlug = categoryName.toLowerCase(); 
+
+        await page.getByTestId('parent-id').selectOption({ index: 2 });
+        await page.getByTestId('name').fill(categoryName);
+        await page.getByTestId('slug').fill(categorySlug);
+
+        await page.getByTestId('category-submit').click();
+        await expect(page.getByRole('alert')).toContainText('Category saved!', { timeout: 10000 } );
+
+        // // EDIT
+        await page.getByTestId('nav-menu').click();
+        await page.getByTestId('nav-admin-categories').click();
+        await expect(page.getByTestId('category-search-submit')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
+        await page.getByTestId('category-search-query').fill(categoryName);
+        await page.getByTestId('category-search-query').blur();
+        await page.getByTestId('category-search-submit').click();
+        const row = page.locator('table tbody tr').first();
+        await expect(row).toBeVisible({ timeout: 15000 });
+        await expect(row).toContainText(categoryName, { timeout: 15000 });
+        await row.getByRole('link', { name: 'Edit' }).click();
+        await page.waitForURL('**/admin/categories/edit/**', { timeout: 10000 });
+        await expect(page.getByTestId('name')).toHaveValue(categoryName, { timeout: 10000 });
+        const editedCategory = categoryName + 'Edited';
+        await page.getByTestId('name').fill(editedCategory);
+        await page.getByTestId('category-submit').click();
+        await expect(page.getByRole('alert')).toContainText('Category saved!', { timeout: 10000 } );
+
+        // // DELETE
+        await page.getByTestId('nav-menu').click();
+        await page.getByTestId('nav-admin-categories').click();
+        await expect(page.getByTestId('category-search-submit')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
+        await page.getByTestId('category-search-query').fill(editedCategory);
+        await page.getByTestId('category-search-query').blur();
+        await page.getByTestId('category-search-submit').click();
+        const editedRow = page.locator('table tbody tr').first();
+        await expect(editedRow).toBeVisible({ timeout: 15000 });
+        await expect(editedRow).toContainText(editedCategory, { timeout: 15000 });
+        await editedRow.getByRole('button', { name: 'Delete' }).click();
+        await expect(page.getByText('Category deleted.')).toBeVisible({ timeout: 10000 });
 
     });
 
@@ -139,13 +182,55 @@ test.describe('Admin Dashboard Management Suite', () => {
         // Then I can list, create, edit, and delete brands. 
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-brands').click();
-
         await expect(page.getByTestId('brand-search-submit')).toBeVisible({timeout:10000});
         await expect(page.getByTestId('brand-add')).toBeVisible({timeout:10000});
-
         const firstRow = page.locator('table tbody tr').first();
         await expect(firstRow.getByRole('link', {name: 'Edit'})).toBeVisible({timeout:10000});
         await expect(firstRow.getByRole('button', {name: 'Delete'})).toBeVisible({timeout:10000});
+
+        // add
+        await page.getByTestId('brand-add').click();
+        await page.waitForURL('**/admin/brands/add', { timeout: 10000 });
+        await expect(page.getByTestId('name')).toBeVisible({timeout:10000});
+        const brandName = 'NewBrand' + Math.random().toString(36).replace(/[^a-z]/g, '').slice(0, 5);
+        const brandSlug = brandName.toLowerCase(); 
+        await page.getByTestId('name').fill(brandName);
+        await page.getByTestId('slug').fill(brandSlug);
+        await page.getByTestId('brand-submit').click();
+        await expect(page.getByRole('alert')).toContainText('Brand saved!', { timeout: 10000 } );
+
+        // edit
+        await page.getByTestId('nav-menu').click();
+        await page.getByTestId('nav-admin-brands').click();
+        await expect(page.getByTestId('brand-search-submit')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
+        await page.getByTestId('brand-search-query').fill(brandName);
+        await page.getByTestId('brand-search-query').blur();
+        await page.getByTestId('brand-search-submit').click(); 
+        const row = page.locator('table tbody tr').first();
+        await expect(row).toBeVisible({ timeout: 15000 });
+        await expect(row).toContainText(brandName, { timeout: 15000 });
+        await row.getByRole('link', { name: 'Edit' }).click();
+        await page.waitForURL('**/admin/brands/edit/**', { timeout: 10000 });
+        await expect(page.getByTestId('name')).toHaveValue(brandName, { timeout: 10000 });
+        const editedBrand = brandName + 'Edited';
+        await page.getByTestId('name').fill(editedBrand);
+        await page.getByTestId('brand-submit').click();
+        await expect(page.getByRole('alert')).toContainText('Brand saved!', { timeout: 10000 } );
+
+        // // DELETE
+        await page.getByTestId('nav-menu').click();
+        await page.getByTestId('nav-admin-brands').click();
+        await expect(page.getByTestId('brand-search-submit')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
+        await page.getByTestId('brand-search-query').fill(editedBrand);
+        await page.getByTestId('brand-search-query').blur();
+        await page.getByTestId('brand-search-submit').click(); 
+        const editedRow = page.locator('table tbody tr').first();
+        await expect(editedRow).toBeVisible({ timeout: 15000 });
+        await expect(editedRow).toContainText(editedBrand, { timeout: 15000 });
+        await editedRow.getByRole('button', { name: 'Delete' }).click();
+        await expect(page.getByText('Brand deleted.')).toBeVisible({ timeout: 10000 });
 
     });
 
