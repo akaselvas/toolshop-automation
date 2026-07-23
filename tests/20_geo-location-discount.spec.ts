@@ -33,6 +33,7 @@ test.describe('Geo-Location Discount', () => {
         );
         expect(locationProduct).toBeDefined();
         locationProductId = locationProduct.id; 
+        locationProductPrice = locationProduct.price; 
     });
 
 
@@ -84,15 +85,13 @@ test.describe('Geo-Location Discount', () => {
     });
 
 
-    test('Discounted price is used for the cart line item - Amsterdam (20%) @sprint5 @AC4', async ({ page }) => {
-        
+    test('Discount in cart | Amsterdam (20%) @sprint5 @AC4', async ({ page }) => {
+        // Given I add a location-discounted product to the cart
+        // Then the discounted price is used for the cart line item. 
         await setGeoLocation(page, 52, 5);
-
-        
         const expectedDiscountedPrice = locationProductPrice * 0.8; 
 
         await page.goto(baseURL + '/product/' + locationProductId);
-        
         const addBtn = page.getByTestId('add-to-cart');
         await expect(addBtn).toBeVisible({ timeout: 10000 });
         await addBtn.click();
@@ -102,13 +101,14 @@ test.describe('Geo-Location Discount', () => {
         await page.getByTestId('nav-cart').click();
         await page.waitForURL('**/checkout', { timeout: 20000 });
 
-        await expect(page.getByTestId('cart-subtotal')).toBeVisible({ timeout: 15000 });
+        const lineDiscountedPrice = page.getByTestId('offer-price').first();
+        await expect(lineDiscountedPrice).toBeVisible({ timeout: 15000 });
 
-        const subtotalText = await page.getByTestId('cart-subtotal').innerText();
-        const subtotalValue = parseFloat(subtotalText.replace('$', '').trim());
+        const priceText = await lineDiscountedPrice.innerText();
+        const priceValue = parseFloat(priceText.replace('$', '').trim());
 
-        expect(subtotalValue).toBeCloseTo(expectedDiscountedPrice, 2); 
-        
+        expect(priceValue).toBeCloseTo(expectedDiscountedPrice, 2); 
+
     });
 
 
