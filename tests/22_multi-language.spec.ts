@@ -87,14 +87,16 @@ test('Language switch @sprint5 @AC4', async ({ page }) => {
 
 
 test.describe('Language Persistence', () => {
-    test.use({ locale: 'en-US' });
+    test.use({ locale: 'es-ES' });
     
     test('Persistence across sessions @sprint5 @AC5', async ({ page }) => {
         // Given I have selected a language
         // Then my preference is stored in the browser (localStorage)
         // And on subsequent visits my stored preference takes priority over browser language detection. 
         await page.goto(baseURL);
-        await expect(page.getByTestId('language-select')).toContainText('EN');
+        
+        await expect(page.getByTestId('language-select')).toContainText('ES');
+        await expect(page.getByRole('link', { name: 'Contacto' })).toBeVisible({ timeout: 10000 });
 
         await page.getByTestId('language-select').click();
         await page.getByTestId('lang-de').click();
