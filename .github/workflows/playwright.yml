@@ -21,7 +21,7 @@ jobs:
     - name: Configure Sprint 5 in SUT
       run: |
         cd sut
-        echo "SPRINT=5" > .env
+        echo "SPRINT=sprint5" > .env
 
     # 3. SOBE O DOCKER COMPOSE: Usa as imagens prontas de produção para subir em segundos
     - name: Start SUT via Docker Compose
