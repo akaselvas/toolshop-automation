@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import * as OTPAuth from 'otpauth';
 
 const baseURL = process.env.URL || 'https://practicesoftwaretesting.com';
-const apiURL = 'https://api.practicesoftwaretesting.com';
+const apiURL = process.env.API_URL || 'https://api.practicesoftwaretesting.com';
 
 // armazena a diferença de relógio com o servidor
 let timeOffset = 0;

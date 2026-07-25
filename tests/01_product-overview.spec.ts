@@ -2,7 +2,6 @@ import {test, expect, Locator} from "@playwright/test"
 
 const baseURL = process.env.URL || 'https://practicesoftwaretesting.com';
 
-//------ SPRINT 1 --------------------------------------------------//
 
 test('Product overview is displayed @AC1', async ({ page }) => {
     // Given I navigate to the home page

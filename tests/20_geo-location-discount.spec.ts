@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const baseURL = process.env.URL || 'https://practicesoftwaretesting.com';
-const apiURL = 'https://api.practicesoftwaretesting.com';
+const apiURL = process.env.API_URL || 'https://api.practicesoftwaretesting.com';
 
 const CITIES = [
     { name: 'New York', lat: 41, lng: 74, discount: 5 },
