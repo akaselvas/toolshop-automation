@@ -4,24 +4,53 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
+  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub [48]
+
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    # 1. CLONA A APLICAÇÃO ALVO (SUT): Baixa o repositório original do Toolshop
+    - name: Clone SUT (Practice Software Testing)
+      run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
+
+    # 2. CONFIGURA A SPRINT 5: Altera o arquivo .env para subir a versão 5 da aplicação
+    - name: Configure Sprint 5 in SUT
+      run: |
+        cd sut
+        echo "SPRINT=5" > .env
+
+    # 3. SOBE O DOCKER COMPOSE: Usa as imagens prontas de produção para subir em segundos
+    - name: Start SUT via Docker Compose
+      run: |
+        cd sut
+        docker compose -f docker-compose.prod.yml up --pull missing -d
+
+    # 4. AGUARDA A APLICAÇÃO ESTAR PRONTA: Espera as portas locais estarem ativas no GitHub
+    - name: Wait for SUT to be healthy
+      run: |
+        npx wait-on http://localhost:4200 --timeout 120000
+
+    # 5. INSTALA AS DEPENDÊNCIAS DOS TESTES
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-    # Instala os navegadores e as dependências nativas de mídia do Linux Ubuntu [48]
     - name: Install Playwright Browsers with system dependencies
       run: npx playwright install --with-deps
+
+    # 6. EXECUTA OS TESTES APONTANDO PARA O LOCALHOST DO RUNNER (Rápido e sem bloqueios!)
     - name: Run Playwright tests
       run: npx playwright test --project=chromium
-    # Upload do relatório HTML caso ocorra alguma falha nos testes da esteira [48]
+      env:
+        URL: http://localhost:4200      # Aponta a UI para a porta local
+        API_URL: http://localhost:8091  # Aponta o Back-end para a porta local
+
+    # 7. UPLOAD DE RELATÓRIOS SE FALHAR [48]
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
