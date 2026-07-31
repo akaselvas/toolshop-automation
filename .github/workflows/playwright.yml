@@ -4,56 +4,81 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub [48]
+  workflow_dispatch:
 
 jobs:
   test:
-    timeout-minutes: 15
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # 1. CLONA A APLICAÇÃO ALVO (SUT): Baixa o repositório original do Toolshop
-    - name: Clone SUT (Practice Software Testing)
-      run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
+      # 1. CLONE THE TARGET APP (SUT)
+      - name: Clone SUT (Practice Software Testing)
+        run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
 
-    # 2. CONFIGURA A SPRINT 5: Altera o arquivo .env para subir a versão 5 da aplicação
-    - name: Configure Sprint 5 in SUT
-      run: |
-        cd sut
-        echo "SPRINT=sprint5" > .env
+      # 2. CONFIGURE SPRINT 5
+      - name: Configure Sprint 5 in SUT
+        working-directory: sut
+        run: |
+          echo "SPRINT=sprint5" > .env
+          echo "DISABLE_LOGGING=true" >> .env
 
-    # 3. SOBE O DOCKER COMPOSE: Usa as imagens prontas de produção para subir em segundos
-    - name: Start SUT via Docker Compose
-      run: |
-        cd sut
-        docker compose -f docker-compose.prod.yml up --pull missing -d
+      # 3. START THE STACK (prebuilt production images = fast boot)
+      - name: Start SUT via Docker Compose
+        working-directory: sut
+        run: docker compose -f docker-compose.prod.yml up --pull missing -d --force-recreate
 
-    # 4. AGUARDA A APLICAÇÃO ESTAR PRONTA: Espera as portas locais estarem ativas no GitHub
-    - name: Wait for SUT to be healthy
-      run: |
-        npx wait-on http://localhost:4200 --timeout 120000
+      # 4. WAIT FOR THE DATABASE TO ACTUALLY BE READY
+      #    (this is what was missing before — up -d returns long before MariaDB can accept connections)
+      - name: Wait for database to be ready
+        working-directory: sut
+        run: |
+          echo "Waiting for MariaDB..."
+          for i in $(seq 1 30); do
+            if docker compose -f docker-compose.prod.yml exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
+              echo "MariaDB is ready!"
+              break
+            fi
+            echo "Attempt $i/30 - not ready yet, waiting 2s..."
+            sleep 2
+          done
 
-    # 5. INSTALA AS DEPENDÊNCIAS DOS TESTES
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-    - name: Install dependencies
-      run: npm ci
-    - name: Install Playwright Browsers with system dependencies
-      run: npx playwright install --with-deps
+      # 5. RUN MIGRATIONS + SEED THE DATABASE
+      #    This is the actual fix for "the site deployed but the DB was empty"
+      - name: Migrate and seed database
+        working-directory: sut
+        run: |
+          docker compose -f docker-compose.prod.yml exec -T laravel-api php artisan migrate:refresh --seed
 
-    # 6. EXECUTA OS TESTES APONTANDO PARA O LOCALHOST DO RUNNER (Rápido e sem bloqueios!)
-    - name: Run Playwright tests
-      run: npx playwright test --project=chromium
-      env:
-        URL: http://localhost:4200      # Aponta a UI para a porta local
-        API_URL: http://localhost:8091  # Aponta o Back-end para a porta local
+      # 6. WAIT FOR THE API TO RESPOND
+      - name: Wait for API to be healthy
+        run: npx wait-on http://localhost:8091/status --timeout 120000
 
-    # 7. UPLOAD DE RELATÓRIOS SE FALHAR [48]
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+      # 7. WAIT FOR THE ANGULAR UI TO BE READY
+      - name: Wait for Angular UI to be ready
+        run: npx wait-on http://localhost:4200 --timeout 120000
+
+      # 8. INSTALL TEST DEPENDENCIES (your repo, not the SUT's)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers with system dependencies
+        run: npx playwright install --with-deps
+
+      # 9. RUN THE TESTS AGAINST LOCALHOST (fast, no rate limits, no shared load)
+      - name: Run Playwright tests
+        run: npx playwright test --project=chromium
+        env:
+          URL: http://localhost:4200
+          API_URL: http://localhost:8091
+
+      # 10. UPLOAD REPORT
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
