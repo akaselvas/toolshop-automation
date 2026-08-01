@@ -9,43 +9,67 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clone SUT
+      # 1. Clona a aplicação alvo
+      - name: Clone SUT (Practice Software Testing)
         run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
 
-      - name: Configure Sprint 5
+      # 2. Configura a Sprint 5
+      - name: Configure Sprint 5 in SUT
         working-directory: sut
         run: |
           echo "SPRINT=sprint5" > .env
           echo "DISABLE_LOGGING=true" >> .env
 
-      # SOLUÇÃO DO PONTO 1 E 2: Usa a versão PROD (Nginx + PHP-FPM). Rápido e sem compilação falsa!
+      # 3. Sobe os containers (Usando o padrão oficial do repositório)
       - name: Start SUT via Docker Compose
         working-directory: sut
-        run: docker compose -p pst -f docker-compose.prod.yml up --pull missing -d
+        run: docker compose -f docker-compose.yml up -d --force-recreate
 
+      - name: Sleep for 30 seconds
+        run: sleep 30s
+
+      # 4. Instala as dependências do Laravel (O segredo que faltava!)
+      - name: Install Composer dependencies
+        working-directory: sut
+        run: docker compose exec -T -u root laravel-api composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-ffi
+
+      # 5. Aguarda o banco de dados estar pronto
       - name: Wait for database to be ready
         working-directory: sut
         run: |
+          echo "Waiting for MariaDB..."
           for i in $(seq 1 30); do
-            if docker compose -p pst exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
+            if docker compose exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
+              echo "MariaDB is ready!"
               break
             fi
             sleep 2
           done
 
-      # SOLUÇÃO DO BANCO VAZIO: Semeia os dados padrão (admin, customer, produtos)
-      - name: Migrate and seed database
+      # 6. Semeia o banco de dados com os produtos e usuários
+      - name: Create & Seed database
         working-directory: sut
-        run: docker compose -p pst exec -T laravel-api php artisan migrate:fresh --seed
+        run: docker compose exec -T laravel-api php artisan migrate:refresh --seed
 
-      # SOLUÇÃO DO PONTO 1: Espera o Nginx de produção responder
+      # 7. Aguarda o Angular compilar e estar pronto
       - name: Wait for Angular UI to be ready
-        run: npx wait-on http://localhost:4200 --timeout 60000
+        working-directory: sut
+        run: |
+          echo "Waiting for Angular UI on port 4200..."
+          for i in $(seq 1 60); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:4200 | grep -q "200"; then
+              echo "Angular UI is ready!"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
 
+      # 8. Instala o Playwright e roda os SEUS testes
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -54,7 +78,6 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # SOLUÇÃO DO PONTO 3: Roda com 1 worker para evitar colisão nas contas estáticas
       - name: Run Playwright tests
         run: npx playwright test --project=chromium --workers=1 --reporter=list,html
         env:
@@ -68,7 +91,6 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-        # 6.1. SALVA-VIDAS: Se o teste falhar ou travar, imprime os logs do servidor (Laravel/Nginx)
       - name: Dump Docker logs on failure
         if: failure()
         working-directory: sut
