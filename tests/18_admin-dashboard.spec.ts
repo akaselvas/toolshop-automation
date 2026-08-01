@@ -312,7 +312,11 @@ test.describe('Admin Dashboard Management Suite', () => {
 
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-users').click();
+        
+        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
+
         await page.getByTestId('user-search-query').fill(userEmail);
+        await page.getByTestId('user-search-query').blur();
         await page.getByTestId('user-search-submit').click();
         await expect(page.locator('table tbody tr').first()).toContainText('John Edited', { timeout: 10000 });
 
@@ -348,7 +352,10 @@ test.describe('Admin Dashboard Management Suite', () => {
 
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-users').click();
+        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
+
         await page.getByTestId('user-search-query').fill(userEmail);
+        await page.getByTestId('user-search-query').blur();
         await page.getByTestId('user-search-submit').click();
 
         const row = page.locator('table tbody tr').first();

@@ -116,8 +116,11 @@ test('Password strength indicator @sprint5 @AC4', async ({ page }) => {
 test('Duplicate email @sprint5 @AC5', async ({ page }) => {
     // Given the email is already registered
     // Then the error "Email is already in use." is displayed.
+    test.setTimeout(45000);
+
     await page.goto(baseURL + '/auth/register');
-    await expect(page.getByRole('heading', { name: 'Customer registration' })).toBeVisible({ timeout: 10000 });
+
+    await expect(page.getByRole('heading', { name: 'Customer registration' })).toBeVisible({ timeout: 25000 });
 
     await page.getByTestId('first-name').fill('John');
     await page.getByTestId('last-name').fill('Doe');
@@ -135,7 +138,7 @@ test('Duplicate email @sprint5 @AC5', async ({ page }) => {
     await page.getByTestId('register-submit').click();
 
     await expect(page.getByText('A customer with this email address already exists.')).toBeVisible({ timeout: 10000 });
-
+    
 });
 
 

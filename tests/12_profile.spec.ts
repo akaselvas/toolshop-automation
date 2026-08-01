@@ -9,7 +9,7 @@ test.describe('Customer Profile', () => {
     let testPassword: string = '';
 
     test.beforeEach(async ({ page }) => {
-        testEmail = `mfa-setup-${Date.now()}@example.com`;
+        testEmail = 'mfa-setup-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '@example.com';
         testPassword = 'AnyP@ssworld11!';
 
         const registerResponse = await page.request.post(`${apiURL}/users/register`, {
