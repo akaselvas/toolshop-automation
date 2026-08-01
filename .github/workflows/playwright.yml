@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Playwright Tests (Live Site)
 on:
   push:
     branches: [ main, master ]
@@ -9,80 +9,27 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Clona a aplicação alvo
-      - name: Clone SUT (Practice Software Testing)
-        run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
-
-      # 2. Configura a Sprint 5
-      - name: Configure Sprint 5 in SUT
-        working-directory: sut
-        run: |
-          echo "SPRINT=sprint5" > .env
-          echo "DISABLE_LOGGING=true" >> .env
-
-      # 3. Sobe os containers (Usando o padrão oficial do repositório)
-      - name: Start SUT via Docker Compose
-        working-directory: sut
-        run: docker compose -f docker-compose.yml up -d --force-recreate
-
-      - name: Sleep for 30 seconds
-        run: sleep 30s
-
-      # 4. Instala as dependências do Laravel (O segredo que faltava!)
-      - name: Install Composer dependencies
-        working-directory: sut
-        run: docker compose exec -T -u root laravel-api composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-ffi
-
-      # 5. Aguarda o banco de dados estar pronto
-      - name: Wait for database to be ready
-        working-directory: sut
-        run: |
-          echo "Waiting for MariaDB..."
-          for i in $(seq 1 30); do
-            if docker compose exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
-              echo "MariaDB is ready!"
-              break
-            fi
-            sleep 2
-          done
-
-      # 6. Semeia o banco de dados com os produtos e usuários
-      - name: Create & Seed database
-        working-directory: sut
-        run: docker compose exec -T laravel-api php artisan migrate:refresh --seed
-
-      # 7. Aguarda o Angular compilar e estar pronto
-      - name: Wait for Angular UI to be ready
-        working-directory: sut
-        run: |
-          echo "Waiting for Angular UI on port 4200..."
-          for i in $(seq 1 60); do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:4200 | grep -q "200"; then
-              echo "Angular UI is ready!"
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
-
-      # 8. Instala o Playwright e roda os SEUS testes
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install dependencies
         run: npm ci
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
 
+      # Instala apenas o Chromium para economizar tempo
+      - name: Install Playwright Chromium & OS dependencies
+        run: npx playwright install --with-deps chromium
+
+      # Roda os testes apontando para o site online, com 1 worker e no Chromium
       - name: Run Playwright tests
         run: npx playwright test --project=chromium --workers=1 --reporter=list,html
         env:
-          URL: http://localhost:4200
-          API_URL: http://localhost:8091
+          URL: https://practicesoftwaretesting.com
+          API_URL: https://api.practicesoftwaretesting.com
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -90,8 +37,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
-
-      - name: Dump Docker logs on failure
-        if: failure()
-        working-directory: sut
-        run: docker compose -p pst logs --tail=200
