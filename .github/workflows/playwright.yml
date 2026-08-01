@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
 
       # SOLUÇÃO DO PONTO 3: Roda com 1 worker para evitar colisão nas contas estáticas
       - name: Run Playwright tests
-        run: npx playwright test --project=chromium --workers=1
+        run: npx playwright test --project=chromium --workers=1 --reporter=list,html
         env:
           URL: http://localhost:4200
           API_URL: http://localhost:8091
@@ -67,3 +67,9 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+        # 6.1. SALVA-VIDAS: Se o teste falhar ou travar, imprime os logs do servidor (Laravel/Nginx)
+      - name: Dump Docker logs on failure
+        if: failure()
+        working-directory: sut
+        run: docker compose -p pst logs --tail=200
