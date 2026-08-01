@@ -8,104 +8,59 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # 1. CLONE THE TARGET APP (SUT)
-      - name: Clone SUT (Practice Software Testing)
+      - name: Clone SUT
         run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
 
-      # 2. CONFIGURE SPRINT 5
-      - name: Configure Sprint 5 in SUT
+      - name: Configure Sprint 5
         working-directory: sut
         run: |
           echo "SPRINT=sprint5" > .env
           echo "DISABLE_LOGGING=true" >> .env
 
-      # 3. START THE STACK
-      #    Using docker-compose.yml (dev, build-from-source) — this is what the
-      #    maintainer's own CI uses and has 190+ green runs on. docker-compose.prod.yml
-      #    is not verified to expose the same ports/routes in this context.
+      # SOLUÇÃO DO PONTO 1 E 2: Usa a versão PROD (Nginx + PHP-FPM). Rápido e sem compilação falsa!
       - name: Start SUT via Docker Compose
         working-directory: sut
-        run: docker compose -f docker-compose.yml up -d --force-recreate
+        run: docker compose -p pst -f docker-compose.prod.yml up --pull missing -d
 
-      - name: Sleep for 30 seconds (wait for containers)
-        run: sleep 30s
-
-      # 4. INSTALL COMPOSER DEPENDENCIES
-      #    The dev image build target doesn't run `composer install` on its own.
-      - name: Install Composer dependencies
-        working-directory: sut
-        run: docker compose exec -T -u root laravel-api composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-ffi
-
-      # 5. WAIT FOR THE DATABASE TO ACTUALLY BE READY
-      #    (this is what was missing before — up -d returns long before MariaDB can accept connections)
       - name: Wait for database to be ready
         working-directory: sut
         run: |
-          echo "Waiting for MariaDB..."
           for i in $(seq 1 30); do
-            if docker compose exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
-              echo "MariaDB is ready!"
+            if docker compose -p pst exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
               break
             fi
-            echo "Attempt $i/30 - not ready yet, waiting 2s..."
             sleep 2
           done
 
-      # 6. RUN MIGRATIONS + SEED THE DATABASE
-      #    This is the actual fix for "the site deployed but the DB was empty"
+      # SOLUÇÃO DO BANCO VAZIO: Semeia os dados padrão (admin, customer, produtos)
       - name: Migrate and seed database
         working-directory: sut
-        run: docker compose exec -T laravel-api php artisan migrate:refresh --seed
+        run: docker compose -p pst exec -T laravel-api php artisan migrate:fresh --seed
 
-      # 7. SANITY-CHECK THE API IS UP
-      - name: GET Version
-        run: curl -v -X GET 'http://localhost:8091/status'
-
-      - name: POST login
-        run: |
-          curl -v -X POST 'http://localhost:8091/users/login' \
-            -H 'Content-Type: application/json' \
-            --data-raw '{"email":"customer@practicesoftwaretesting.com","password":"welcome01"}'
-
-      # 8. WAIT FOR THE ANGULAR UI TO BE READY
+      # SOLUÇÃO DO PONTO 1: Espera o Nginx de produção responder
       - name: Wait for Angular UI to be ready
-        working-directory: sut
-        run: |
-          echo "Waiting for Angular UI on port 4200..."
-          for i in $(seq 1 60); do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:4200 | grep -q "200"; then
-              echo "Angular UI is ready!"
-              exit 0
-            fi
-            echo "Attempt $i/60 - not ready yet, waiting 5s..."
-            sleep 5
-          done
-          echo "Angular UI failed to start within 5 minutes"
-          docker compose logs angular-ui
-          exit 1
+        run: npx wait-on http://localhost:4200 --timeout 60000
 
-      # 9. INSTALL TEST DEPENDENCIES (your repo, not the SUT's)
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 20
       - name: Install dependencies
         run: npm ci
-      - name: Install Playwright Browsers with system dependencies
+      - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # 10. RUN THE TESTS AGAINST LOCALHOST (fast, no rate limits, no shared load)
+      # SOLUÇÃO DO PONTO 3: Roda com 1 worker para evitar colisão nas contas estáticas
       - name: Run Playwright tests
-        run: npx playwright test --project=chromium
+        run: npx playwright test --project=chromium --workers=1
         env:
           URL: http://localhost:4200
           API_URL: http://localhost:8091
 
-      # 11. UPLOAD REPORT
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
