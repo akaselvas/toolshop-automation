@@ -30,6 +30,9 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
+    baseURL: process.env.URL || 'https://practicesoftwaretesting.com',
+    apiURL: process.env.API_URL || 'https://api.practicesoftwaretesting.com',
+
     /* Base URL to use in actions like `await page.goto('')`. */
     // baseURL: 'http://localhost:3000',
 
