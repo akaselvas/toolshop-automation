@@ -68,7 +68,11 @@ test.describe('Admin Dashboard Management Suite', () => {
         await expect(page.getByTestId('product-search-submit')).toBeVisible({ timeout: 15000 });
         await page.getByTestId('product-search-query').fill(productName);
         await page.getByTestId('product-search-query').blur(); 
+        const searchResponsePromise = page.waitForResponse(response =>
+            response.url().includes('/products') && response.request().method() === 'GET'
+        );
         await page.getByTestId('product-search-submit').click();
+        await searchResponsePromise;
 
         const row = page.locator('table tbody tr').first();
         await expect(row).toBeVisible({timeout:15000});

@@ -25,10 +25,18 @@ jobs:
           echo "SPRINT=sprint5" > .env
           echo "DISABLE_LOGGING=true" >> .env
 
+      - name: Configure dummy Google OAuth credentials
+        working-directory: sut
+        run: |
+          sed -i 's/^APP_GOOGLE_ID=.*/APP_GOOGLE_ID=dummy-client-id.apps.googleusercontent.com/' sprint5/API/.env
+          sed -i 's/^APP_GOOGLE_SECRET=.*/APP_GOOGLE_SECRET=dummy-secret/' sprint5/API/.env
+
       # 3. Start the stack using prebuilt production images (Fast boot)
       - name: Start SUT via Docker Compose (build-from-source)
         working-directory: sut
         run: docker compose up -d --build --force-recreate
+
+      
 
       - name: Fix bootstrap/cache permissions
         working-directory: sut
