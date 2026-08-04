@@ -18,12 +18,19 @@ jobs:
       - name: Clone SUT (Practice Software Testing)
         run: git clone https://github.com/testsmith-io/practice-software-testing.git sut
 
+
       # 2. Configure the environment variables for the SUT
       - name: Configure Sprint 5 in SUT
         working-directory: sut
         run: |
           echo "SPRINT=sprint5" > .env
           echo "DISABLE_LOGGING=true" >> .env
+
+      - name: Force production flag in Angular dev environment
+        working-directory: sut
+        run: |
+          sed -i "s/production: false/production: true/" sprint5/UI/src/environments/environment.ts
+          cat sprint5/UI/src/environments/environment.ts
 
       - name: Configure dummy Google OAuth credentials
         working-directory: sut
@@ -89,20 +96,7 @@ jobs:
             sleep 2
           done
 
-      - name: Build Angular for production and serve statically
-        working-directory: sut
-        run: |
-          docker compose exec -T angular-ui sh -c "npm install --force && npx ng build --configuration production"
-          docker compose exec -T angular-ui sh -c "pkill -f 'ng serve' || true"
-          sleep 2
-          docker compose exec -T -d angular-ui sh -c "npx http-server dist/*/browser -p 4200"
-          sleep 5
-      - name: Re-verify Angular UI is back up (now serving production build)
-        run: |
-          for i in $(seq 1 30); do
-            curl -s -o /dev/null -w "%{http_code}" http://localhost:4200 | grep -q "200" && break
-            sleep 2
-          done
+      
 
       # 8. Setup Node and install your test dependencies
       - uses: actions/setup-node@v4
