@@ -40,7 +40,7 @@ jobs:
         run: |
           echo "Waiting for MariaDB..."
           for i in $(seq 1 30); do
-            if docker compose -f docker-compose.prod.yml exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
+            if docker compose exec -T mariadb mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
               echo "MariaDB is ready!"
               break
             fi
@@ -51,7 +51,7 @@ jobs:
       # 5. Run migrations and seed the database with default data
       - name: Migrate and seed database
         working-directory: sut
-        run: docker compose -f docker-compose.prod.yml exec -T laravel-api php artisan migrate:fresh --seed
+        run: docker compose exec -T laravel-api php artisan migrate:fresh --seed
 
       # 6. Wait for the API to be healthy
       - name: Wait for API to be healthy
