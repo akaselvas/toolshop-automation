@@ -93,7 +93,16 @@ jobs:
         working-directory: sut
         run: |
           docker compose exec -T angular-ui sh -c "npm install --force && npx ng build --configuration production"
+          docker compose exec -T angular-ui sh -c "pkill -f 'ng serve' || true"
+          sleep 2
           docker compose exec -T -d angular-ui sh -c "npx http-server dist/*/browser -p 4200"
+          sleep 5
+      - name: Re-verify Angular UI is back up (now serving production build)
+        run: |
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null -w "%{http_code}" http://localhost:4200 | grep -q "200" && break
+            sleep 2
+          done
 
       # 8. Setup Node and install your test dependencies
       - uses: actions/setup-node@v4
