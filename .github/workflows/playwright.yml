@@ -85,6 +85,14 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Pre-compile Angular routes
+        run: |
+          for path in "" "product" "auth/login" "account/dashboard" "categories"; do
+            curl -s -o /dev/null "http://localhost:4200/$path" || true
+            sleep 2
+          done
+          sleep 30
+
       # 10. Run the tests against the local deployment
       - name: Run Playwright tests
         run: npx playwright test --project=chromium --workers=1 --reporter=list,html
