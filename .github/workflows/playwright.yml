@@ -107,6 +107,12 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
         
+      - name: Debug - verify Google env vars
+        working-directory: sut
+        run: |
+          docker compose exec -T laravel-api grep GOOGLE .env
+          docker compose exec -T laravel-api php artisan config:clear
+
 
       # 10. Run the tests against the local deployment
       - name: Run Playwright tests

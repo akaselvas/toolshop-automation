@@ -66,11 +66,11 @@ test.describe('Admin Dashboard Management Suite', () => {
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-products').click();
         await expect(page.getByTestId('product-search-submit')).toBeVisible({ timeout: 15000 });
-        await page.getByTestId('product-search-query').fill(productName);
-        await page.getByTestId('product-search-query').blur(); 
         const searchResponsePromise = page.waitForResponse(response =>
             response.url().includes('/products') && response.request().method() === 'GET'
         );
+        await page.getByTestId('product-search-query').fill(productName);
+        await page.getByTestId('product-search-query').blur(); 
         await page.getByTestId('product-search-submit').click();
         await searchResponsePromise;
 
