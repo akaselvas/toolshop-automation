@@ -30,6 +30,10 @@ jobs:
         working-directory: sut
         run: docker compose up -d --build --force-recreate
 
+      - name: Fix bootstrap/cache permissions
+        working-directory: sut
+        run: docker compose exec -T -u root laravel-api sh -c "mkdir -p bootstrap/cache storage/framework/{cache,sessions,views} && chmod -R 777 bootstrap/cache storage"
+
       - name: Install Composer dependencies
         working-directory: sut
         run: docker compose exec -T -u root laravel-api composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-ffi
