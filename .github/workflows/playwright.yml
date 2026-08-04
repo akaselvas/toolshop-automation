@@ -72,6 +72,10 @@ jobs:
         working-directory: sut
         run: docker compose exec -T laravel-api php artisan migrate:fresh --seed
 
+      - name: Force queue worker to process jobs immediately
+        working-directory: sut
+        run: docker compose exec -T -d laravel-api php artisan queue:work --daemon
+
       # 6. Wait for the API to be healthy
       - name: Wait for API to be healthy
         run: |
