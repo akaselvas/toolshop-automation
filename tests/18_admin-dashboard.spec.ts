@@ -97,15 +97,19 @@ test.describe('Admin Dashboard Management Suite', () => {
             { timeout: 15000 }
         );
         await page.getByTestId('product-submit').click();
-        await editResponsePromise;
+        const editResponse = await editResponsePromise;
+        const savedProduct = await editResponse.json();
+        expect(savedProduct.name).toBe(editedName);
         await expect(page.getByText(/Product saved/i)).toBeVisible({ timeout: 10000 });
 
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-products').click();
         await expect(page.getByTestId('product-search-submit')).toBeVisible({ timeout: 15000 });
         await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
-        await page.getByTestId('product-search-query').fill(editedName);
-        await page.getByTestId('product-search-query').blur(); 
+        await page.getByTestId('product-search-query').click();
+        await page.getByTestId('product-search-query').fill('');           // clear first
+        await page.getByTestId('product-search-query').pressSequentially(editedName, { delay: 30 });
+        await page.getByTestId('product-search-query').blur();
         await page.getByTestId('product-search-submit').click();
         const editedRow = page.locator('table tbody tr').first();
         await expect(editedRow).toBeVisible({timeout:15000})
