@@ -108,11 +108,11 @@ test.describe('Admin Dashboard Management Suite', () => {
         await expect(page.getByText(/Product saved/i)).toBeVisible({ timeout: 10000 });
 
         await page.getByTestId('nav-menu').click();
-        const listResponsePromise = page.waitForResponse(response =>
+        const listResponsePromise1 = page.waitForResponse(response =>
             response.url().includes('/products') && response.request().method() === 'GET'
         );
         await page.getByTestId('nav-admin-products').click();
-        await listResponsePromise;
+        await listResponsePromise1;
 
         await expect(page.getByTestId('product-search-submit')).toBeVisible({ timeout: 15000 });
         await page.getByTestId('product-search-query').click();
