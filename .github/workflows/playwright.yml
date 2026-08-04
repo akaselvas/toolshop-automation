@@ -26,9 +26,13 @@ jobs:
           echo "DISABLE_LOGGING=true" >> .env
 
       # 3. Start the stack using prebuilt production images (Fast boot)
-      - name: Start SUT via Docker Compose
+      - name: Start SUT via Docker Compose (build-from-source)
         working-directory: sut
-        run: docker compose -f docker-compose.prod.yml up --pull missing -d --force-recreate
+        run: docker compose up -d --build --force-recreate
+
+      - name: Install Composer dependencies
+        working-directory: sut
+        run: docker compose exec -T -u root laravel-api composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-ffi
 
       # 4. Wait for MariaDB to be fully ready to accept connections
       - name: Wait for database to be ready
@@ -73,6 +77,12 @@ jobs:
             sleep 2
           done
 
+      - name: Build Angular for production and serve statically
+        working-directory: sut
+        run: |
+          docker compose exec -T angular-ui sh -c "npm install --force && npx ng build --configuration production"
+          docker compose exec -T -d angular-ui sh -c "npx http-server dist/*/browser -p 4200"
+
       # 8. Setup Node and install your test dependencies
       - uses: actions/setup-node@v4
         with:
@@ -84,14 +94,7 @@ jobs:
       # 9. Install Playwright (only Chromium to save time)
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
-
-      - name: Pre-compile Angular routes
-        run: |
-          for path in "" "product" "auth/login" "account/dashboard" "categories"; do
-            curl -s -o /dev/null "http://localhost:4200/$path" || true
-            sleep 2
-          done
-          sleep 30
+        
 
       # 10. Run the tests against the local deployment
       - name: Run Playwright tests
