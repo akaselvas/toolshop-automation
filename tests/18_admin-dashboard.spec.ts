@@ -66,13 +66,16 @@ test.describe('Admin Dashboard Management Suite', () => {
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-products').click();
         await expect(page.getByTestId('product-search-submit')).toBeVisible({ timeout: 15000 });
-        await page.getByTestId('product-search-query').fill(productName);
-        await page.getByTestId('product-search-query').blur();
-        await page.getByTestId('product-search-submit').click();
 
+        await expect(async () => {
+            await page.getByTestId('product-search-query').fill(productName);
+            await page.getByTestId('product-search-query').blur();
+            await page.getByTestId('product-search-submit').click();
+            await expect(page.locator('table tbody tr').first()).toContainText(productName, { timeout: 3000 });
+        }).toPass({ timeout: 20000 });
 
         const row = page.locator('table tbody tr').first();
-        await expect(row).toBeVisible({timeout:15000});
+        await expect(row).toBeVisible({ timeout: 15000 });
         await expect(row).toContainText(productName, { timeout: 15000 });
 
         // EDIT
@@ -91,29 +94,22 @@ test.describe('Admin Dashboard Management Suite', () => {
         await page.getByTestId('rental').check();
         await page.getByTestId('rental').uncheck();
         await page.getByTestId('stock').fill('1');
-        const editResponsePromise = page.waitForResponse(response =>
-            response.url().includes('/products/') &&
-            response.request().method() === 'PUT',
-            { timeout: 15000 }
-        );
         await page.getByTestId('product-submit').click();
-        const editResponse = await editResponsePromise;
-        const savedProduct = await editResponse.json();
-        console.log('EDIT RESPONSE:', JSON.stringify(savedProduct, null, 2));
         await expect(page.getByText(/Product saved/i)).toBeVisible({ timeout: 10000 });
 
         await page.getByTestId('nav-menu').click();
         await page.getByTestId('nav-admin-products').click();
         await expect(page.getByTestId('product-search-submit')).toBeVisible({ timeout: 15000 });
-        await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
-        await page.getByTestId('product-search-query').click();
-        await page.getByTestId('product-search-query').fill('');           // clear first
-        await page.getByTestId('product-search-query').pressSequentially(editedName, { delay: 30 });
-        await page.getByTestId('product-search-query').blur();
-        await page.getByTestId('product-search-submit').click();
-        
+
+        await expect(async () => {
+            await page.getByTestId('product-search-query').fill(editedName);   // .fill(), NOT pressSequentially
+            await page.getByTestId('product-search-query').blur();
+            await page.getByTestId('product-search-submit').click();
+            await expect(page.locator('table tbody tr').first()).toContainText(editedName, { timeout: 3000 });
+        }).toPass({ timeout: 20000 });
+
         const editedRow = page.locator('table tbody tr').first();
-        await expect(editedRow).toBeVisible({timeout:15000})
+        await expect(editedRow).toBeVisible({ timeout: 15000 });
         await expect(editedRow).toContainText(editedName, { timeout: 15000 });
 
         await editedRow.getByRole('button', { name: 'Delete' }).click();
